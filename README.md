@@ -16,7 +16,8 @@ inactivity may take 10–30s while the instance spins back up.
 - **Drag-and-drop or file-picker upload** for PDF, PNG, and JPG files.
 - **Text extraction**
   - PDFs are parsed directly with `pypdf` (preserves page order/formatting).
-  - Images are run through Tesseract OCR via `pytesseract`.
+  - Images are run through Tesseract OCR via `pytesseract`, optionally
+    upgraded to Gemini vision for emoji-aware extraction — see below.
 - **Engagement analysis** (rule-based, no external API/key required):
   - Word count vs. the ideal engagement range
   - Hashtag count and density
@@ -32,6 +33,7 @@ inactivity may take 10–30s while the instance spins back up.
 - **Backend:** Python, Flask
 - **PDF parsing:** pypdf
 - **OCR:** pytesseract + Tesseract OCR engine
+- **Vision (optional):** Gemini Flash via `google-genai`
 - **Frontend:** plain HTML/CSS/JS (no build step, no `node_modules`)
 
 ## Setup
@@ -51,6 +53,23 @@ python app.py
 ```
 
 Then open **http://localhost:5000** in your browser.
+
+## Optional Enhancement: Gemini Vision for Emoji Detection
+
+Tesseract OCR can't recognize emoji — it's a text-glyph recognizer, so
+pictographs are silently dropped from image uploads before analysis ever
+sees them. Setting a `GEMINI_API_KEY` env var switches image extraction to
+Gemini Flash (vision), which reads emoji correctly alongside the text:
+
+```bash
+export GEMINI_API_KEY=AIza...   # free key: aistudio.google.com
+```
+
+This is entirely optional — without it, the app works exactly as before
+(Tesseract-only, no emoji on images). With it, image uploads get the same
+emoji-aware analysis that PDF uploads already have. Google AI Studio's free
+tier (~15 requests/min, 1,500/day) covers this app's usage at no cost. Full
+rationale in [docs/limitations.md](docs/limitations.md).
 
 ## Project Structure
 

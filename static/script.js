@@ -7,6 +7,11 @@ const scoreCircle = document.getElementById("score-circle");
 const statsEl = document.getElementById("stats");
 const extractedTextEl = document.getElementById("extracted-text");
 const suggestionsEl = document.getElementById("suggestions");
+const previewBox = document.getElementById("preview-box");
+const previewImage = document.getElementById("preview-image");
+const previewFilename = document.getElementById("preview-filename");
+
+let currentPreviewUrl = null;
 
 dropZone.addEventListener("click", () => fileInput.click());
 
@@ -35,6 +40,7 @@ fileInput.addEventListener("change", () => {
 
 async function handleFile(file) {
   reset();
+  showPreview(file);
   loading.classList.remove("hidden");
 
   const formData = new FormData();
@@ -60,6 +66,23 @@ function reset() {
   results.classList.add("hidden");
   suggestionsEl.innerHTML = "";
   statsEl.innerHTML = "";
+}
+
+function showPreview(file) {
+  if (currentPreviewUrl) {
+    URL.revokeObjectURL(currentPreviewUrl);
+    currentPreviewUrl = null;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    previewBox.classList.add("hidden");
+    return;
+  }
+
+  currentPreviewUrl = URL.createObjectURL(file);
+  previewImage.src = currentPreviewUrl;
+  previewFilename.textContent = file.name;
+  previewBox.classList.remove("hidden");
 }
 
 function showError(message) {

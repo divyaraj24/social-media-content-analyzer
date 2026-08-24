@@ -4,19 +4,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Social Media Content Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <main class="container">
     <header>
-      <h1>📊 Social Media Content Analyzer</h1>
+      <span class="eyebrow">Engagement Analyzer</span>
+      <h1>Social Media Content Analyzer</h1>
       <p>Upload a screenshot or PDF of your post — get instant engagement suggestions.</p>
     </header>
 
     <section id="drop-zone" class="drop-zone">
+      <svg class="drop-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 16V4M12 4L7 9M12 4l5 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
       <p id="drop-text">Drag &amp; drop a PDF or image here, or click to browse</p>
+      <span class="drop-hint">PDF, PNG, JPG — up to 10 MB</span>
       <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" hidden>
     </section>
+
+    <div id="preview-box" class="preview-box hidden">
+      <img id="preview-image" alt="Uploaded post preview">
+      <span id="preview-filename" class="preview-filename"></span>
+    </div>
 
     <div id="loading" class="hidden">
       <div class="spinner"></div>
@@ -39,6 +53,10 @@
       <h2>Suggestions</h2>
       <ul id="suggestions" class="suggestions"></ul>
     </section>
+
+    <footer class="footer">
+      <span>Rule-based analysis · no data stored</span>
+    </footer>
   </main>
 
   <script src="{{ url_for('static', filename='script.js') }}"></script>
