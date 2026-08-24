@@ -4,6 +4,13 @@ Upload a screenshot or PDF of a social media post. The app extracts the
 text (PDF parsing or OCR) and returns an engagement score with concrete,
 actionable suggestions for improving the post.
 
+## Live Demo
+
+**[social-media-content-analyzer-ij1j.onrender.com](https://social-media-content-analyzer-ij1j.onrender.com)**
+
+Hosted on Render's free tier — the first request after a period of
+inactivity may take 10–30s while the instance spins back up.
+
 ## Features
 
 - **Drag-and-drop or file-picker upload** for PDF, PNG, and JPG files.
