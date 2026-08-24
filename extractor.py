@@ -16,6 +16,7 @@ from PIL import Image
 import pytesseract
 
 _VISION_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+_VISION_TIMEOUT_MS = 20_000
 _VISION_PROMPT = (
     "Transcribe every piece of text visible in this image exactly as it "
     "appears, including all emoji, hashtags, @mentions, and punctuation. "
@@ -47,7 +48,10 @@ def _extract_text_from_image_vision(filepath: str) -> str | None:
         response = client.models.generate_content(
             model=_VISION_MODEL,
             contents=[_VISION_PROMPT, image],
-            config=types.GenerateContentConfig(temperature=0),
+            config=types.GenerateContentConfig(
+                temperature=0,
+                http_options=types.HttpOptions(timeout=_VISION_TIMEOUT_MS),
+            ),
         )
         text = (response.text or "").strip()
         if not text:

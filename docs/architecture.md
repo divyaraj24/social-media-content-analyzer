@@ -48,9 +48,15 @@ JSON response ──► Browser renders score, stats, extracted text, suggestion
     (Pillow + `pytesseract.image_to_string`, the original Tesseract path).
 - The vision call is wrapped in a broad `try/except` by design: any failure
   degrades gracefully to the pre-existing OCR behavior rather than breaking
-  image uploads. See [limitations.md](limitations.md) for why this exists
-  (Tesseract cannot recognize emoji glyphs at all) and the cost/offline
-  trade-off it introduces.
+  image uploads. It also carries a 20s request timeout
+  (`_VISION_TIMEOUT_MS`, via `HttpOptions(timeout=...)`) so a slow or
+  hanging Gemini response fails over to Tesseract quickly instead of the
+  request riding all the way to gunicorn's 120s worker timeout. Every
+  outcome — used vision, fell back and why, unset key — is printed to
+  stdout, so which path ran is never a silent guess (visible in Render's
+  logs or the local dev console). See [limitations.md](limitations.md) for
+  why this exists (Tesseract cannot recognize emoji glyphs at all) and the
+  cost/offline trade-off it introduces.
 - No caching, no image preprocessing (no deskew/threshold/contrast
   correction) on the Tesseract fallback path — OCR quality there is whatever
   Tesseract produces from the raw image.
