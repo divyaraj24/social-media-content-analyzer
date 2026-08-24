@@ -81,3 +81,7 @@ model and platform-specific presets (Instagram vs. LinkedIn vs. X).
 ```bash
 python -m pytest tests/
 ```
+
+## Docs
+
+See [docs/](docs/) for architecture, the API reference, full setup/troubleshooting, testing notes, and known limitations.
