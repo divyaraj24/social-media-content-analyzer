@@ -9,3 +9,4 @@ these docs go into more detail.
 - [setup.md](setup.md) — full local dev setup, including Tesseract install per OS
 - [testing.md](testing.md) — running tests, what's covered, how to add cases
 - [limitations.md](limitations.md) — known limitations and the reasoning behind them
+- [deployment.md](deployment.md) — deploying to Render (Docker, since Tesseract is a system dependency)
