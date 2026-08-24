@@ -44,11 +44,45 @@ set, which is exactly the capability Tesseract lacks.
 
 **Why Gemini Flash specifically:** it's natively multimodal (text + vision
 in one model, no separate OCR endpoint to wire up), the `google-genai` SDK
-call is a few lines, and Google AI Studio's free tier (roughly 15
-requests/minute, 1,500/day, model-dependent) covers this app's expected
-volume without a paid plan — an API key from
-[aistudio.google.com](https://aistudio.google.com) takes under a minute to
-get.
+call is a few lines, and it's available on Google AI Studio's free tier —
+an API key from [aistudio.google.com](https://aistudio.google.com) takes
+under a minute to get.
+
+**The free tier's actual daily limit is low, and per-model.** Google no
+longer publishes static numbers on its rate-limits page — it points to
+your own live usage at
+[aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit),
+since limits vary by account and model. In practice, testing this feature
+hit the real ceiling for `gemini-2.5-flash` quickly: the API's own error
+response reported `limit: 20,
+quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier` — 20 requests
+*per day* for that model on a free-tier key, not the far higher figure an
+earlier version of this doc assumed. Once that's hit, every request gets a
+`429 RESOURCE_EXHAUSTED` until the quota resets (daily).
+
+**This is handled, not just documented:**
+- The quota is tracked *per model*, not per account — `_extract_text_from_image_vision`
+  in [extractor.py](../extractor.py) retries a 429 once (see the retry
+  section below), and if that also fails, falls straight back to Tesseract
+  OCR exactly like any other failure. A day-exhausted key doesn't break
+  image uploads — it just silently loses emoji detection until the quota
+  resets.
+- Because the limit is per-model, switching models sidesteps an exhausted
+  quota without a code change: `GEMINI_MODEL=gemini-flash-lite-latest`
+  (or another current model) draws from a separate daily allowance. Verified
+  working — including correct emoji transcription, not just plain text —
+  as a same-key workaround when `gemini-2.5-flash`'s quota was exhausted.
+  Set it in your shell before `python app.py`, or as a Render env var
+  alongside `GEMINI_API_KEY`.
+
+**One retry on transient failures (429, 5xx, network/timeout):** a jittered
+~2-3s delay (`2s + random.uniform(0, 1)`, not a flat delay, so concurrent
+requests don't retry in lockstep), then bail to Tesseract if the retry also
+fails. Non-transient errors (bad key, bad request) skip the retry entirely
+— it would just fail again identically. Capped at exactly one retry on
+purpose: this is an optional enhancement layered on top of a working
+offline fallback, not the core path, so a slow/unhappy Gemini shouldn't
+make the user wait long for a feature they might not even have configured.
 
 **A note on determinism:** default sampling occasionally dropped emoji
 from an otherwise-correct transcription (~1 in 4 in testing). Setting

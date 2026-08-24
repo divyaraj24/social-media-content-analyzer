@@ -48,10 +48,22 @@ under a minute — no billing setup required for the free tier):
 export GEMINI_API_KEY=AIza...
 ```
 
-The Google AI Studio free tier (roughly 15 requests/minute, 1,500/day,
-model-dependent) covers this app's expected usage without any cost. Leave
-the key unset to keep the original Tesseract-only behavior (also free, just
-without emoji).
+The free tier's daily limit is low and per-model — testing this feature
+hit `gemini-2.5-flash`'s actual ceiling at 20 requests/day on a free key
+(check your own current limits at
+[aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit)).
+Once hit, the app falls back to Tesseract automatically — same as leaving
+the key unset. To keep emoji detection working past that point without
+waiting for the daily reset, point at a different model (separate quota
+per model):
+
+```bash
+export GEMINI_MODEL=gemini-flash-lite-latest
+```
+
+See [limitations.md](limitations.md) for the full explanation. Leave
+`GEMINI_API_KEY` unset entirely to keep the original Tesseract-only
+behavior (also free, just without emoji).
 
 ## 2. Create a virtualenv and install Python dependencies
 

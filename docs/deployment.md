@@ -67,8 +67,13 @@ Gemini vision path in production, get a free key at
   Environment Variable** → key `GEMINI_API_KEY`, value your key.
 
 Either way this is optional — the app works without it, just without
-emoji detection on images. Google AI Studio's free tier (roughly 15
-requests/minute, 1,500/day) comfortably covers a demo deployment.
+emoji detection on images. The free tier's daily limit is low and
+per-model (as low as 20 requests/day observed for `gemini-2.5-flash` — see
+[limitations.md](limitations.md)); a demo deployment can hit it. If it
+does, add a `GEMINI_MODEL` env var (e.g. `gemini-flash-lite-latest`)
+alongside `GEMINI_API_KEY` to draw from a separate model's quota instead
+of waiting for the daily reset — no redeploy needed beyond the env var
+change.
 
 ## 4. Verify the deploy
 

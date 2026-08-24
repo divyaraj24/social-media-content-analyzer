@@ -67,9 +67,12 @@ export GEMINI_API_KEY=AIza...   # free key: aistudio.google.com
 
 This is entirely optional — without it, the app works exactly as before
 (Tesseract-only, no emoji on images). With it, image uploads get the same
-emoji-aware analysis that PDF uploads already have. Google AI Studio's free
-tier (~15 requests/min, 1,500/day) covers this app's usage at no cost. Full
-rationale in [docs/limitations.md](docs/limitations.md).
+emoji-aware analysis that PDF uploads already have, at no cost within
+Google AI Studio's free tier. That tier's daily limit is low and
+per-model — see [docs/limitations.md](docs/limitations.md) for the actual
+number we hit, and how to route around it via `GEMINI_MODEL` without
+losing emoji detection. Once it's hit, the app falls back to Tesseract
+automatically, same as having no key at all.
 
 ## Project Structure
 
