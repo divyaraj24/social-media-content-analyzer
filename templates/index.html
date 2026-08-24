@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Media Content Analyzer</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>📊 Social Media Content Analyzer</h1>
+      <p>Upload a screenshot or PDF of your post — get instant engagement suggestions.</p>
+    </header>
+
+    <section id="drop-zone" class="drop-zone">
+      <p id="drop-text">Drag &amp; drop a PDF or image here, or click to browse</p>
+      <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg" hidden>
+    </section>
+
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p>Extracting text and analyzing…</p>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+
+    <section id="results" class="hidden">
+      <div class="score-card">
+        <div id="score-circle" class="score-circle">--</div>
+        <p>Engagement Score</p>
+      </div>
+
+      <div class="stats" id="stats"></div>
+
+      <h2>Extracted Text</h2>
+      <pre id="extracted-text" class="extracted-text"></pre>
+
+      <h2>Suggestions</h2>
+      <ul id="suggestions" class="suggestions"></ul>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
