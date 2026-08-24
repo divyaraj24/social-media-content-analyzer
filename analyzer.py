@@ -13,9 +13,13 @@ MENTION_RE = re.compile(r"@\w+")
 URL_RE = re.compile(r"https?://\S+|www\.\S+")
 EMOJI_RE = re.compile(
     "["
-    "\U0001F300-\U0001FAFF"
-    "\U00002600-\U000027BF"
-    "\U0001F1E6-\U0001F1FF"
+    "\U0001F300-\U0001FAFF"  # symbols & pictographs, emoticons, transport, supplemental
+    "\U00002600-\U000027BF"  # misc symbols & dingbats
+    "\U0001F1E6-\U0001F1FF"  # regional indicators (flags)
+    "\U00002B00-\U00002BFF"  # misc symbols/arrows, e.g. ⭐ ⬛ ⬜
+    "\U00002300-\U000023FF"  # misc technical, e.g. ⌚ ⏰ ⏳
+    "\U0000203C\U00002049"  # ‼ ⁉
+    "\U0000FE0F\U0000200D"  # variation selector-16 + ZWJ, bind combined sequences
     "]+"
 )
 
