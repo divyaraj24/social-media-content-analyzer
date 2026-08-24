@@ -53,7 +53,24 @@ git push -u origin main
 Either way, Render builds the image, starts the container, and gives you a
 URL like `https://social-media-content-analyzer.onrender.com`.
 
-## 3. Verify the deploy
+## 3. (Optional) Set `GEMINI_API_KEY` for emoji-aware image extraction
+
+Without this, image uploads fall back to Tesseract OCR — which works, but
+can't detect emoji (see [limitations.md](limitations.md)). To enable the
+Gemini vision path in production, get a free key at
+[aistudio.google.com](https://aistudio.google.com), then:
+
+- **Blueprint flow**: `render.yaml` declares `GEMINI_API_KEY` with
+  `sync: false`, so Render prompts for its value during the Blueprint
+  **Apply** step without storing it in the repo.
+- **Manual service**: service **Settings** → **Environment** → **Add
+  Environment Variable** → key `GEMINI_API_KEY`, value your key.
+
+Either way this is optional — the app works without it, just without
+emoji detection on images. Google AI Studio's free tier (roughly 15
+requests/minute, 1,500/day) comfortably covers a demo deployment.
+
+## 4. Verify the deploy
 
 Once it's live:
 

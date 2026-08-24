@@ -15,7 +15,8 @@ app.py            — Flask route, file validation, save/cleanup, error shaping
         ▼
 extractor.py      — turns the uploaded file into raw text
         │             • PDF  → pypdf (direct text extraction)
-        │             • image → pytesseract (Tesseract OCR)
+        │             • image → Gemini Flash vision (if GEMINI_API_KEY set),
+        │                       else Tesseract OCR (pytesseract)
         ▼
 analyzer.py       — turns raw text into an engagement score + suggestions
         │             (pure function, no I/O, fully deterministic)
@@ -38,10 +39,21 @@ JSON response ──► Browser renders score, stats, extracted text, suggestion
 - `extract_text(filepath)` dispatches on file extension:
   - `.pdf` → `extract_text_from_pdf`: reads every page with `pypdf.PdfReader`,
     joins non-empty pages with a blank line.
-  - `.png/.jpg/.jpeg` → `extract_text_from_image`: opens with Pillow, converts
-    to RGB if needed, runs `pytesseract.image_to_string`.
-- No caching, no preprocessing (no deskew/threshold/contrast correction) —
-  OCR quality is whatever Tesseract produces from the raw image.
+  - `.png/.jpg/.jpeg` → `extract_text_from_image`: tries
+    `_extract_text_from_image_vision` first (sends the image to
+    `gemini-2.5-flash` via the `google-genai` SDK at `temperature=0`, asking
+    it to transcribe all text *and* emoji verbatim); if that returns
+    `None` — no `GEMINI_API_KEY` configured, or any exception (network,
+    auth, rate limit) — falls back to `_extract_text_from_image_ocr`
+    (Pillow + `pytesseract.image_to_string`, the original Tesseract path).
+- The vision call is wrapped in a broad `try/except` by design: any failure
+  degrades gracefully to the pre-existing OCR behavior rather than breaking
+  image uploads. See [limitations.md](limitations.md) for why this exists
+  (Tesseract cannot recognize emoji glyphs at all) and the cost/offline
+  trade-off it introduces.
+- No caching, no image preprocessing (no deskew/threshold/contrast
+  correction) on the Tesseract fallback path — OCR quality there is whatever
+  Tesseract produces from the raw image.
 
 ### `analyzer.py`
 - `analyze_content(text) -> dict` is a pure function: given text in, a dict

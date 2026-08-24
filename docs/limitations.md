@@ -4,34 +4,86 @@ These are things the app currently doesn't handle, either because they're
 fundamental to the tools it's built on, or because they were deliberately
 scoped out. Recorded here so they aren't mistaken for bugs.
 
-## OCR cannot see emoji in images
+## OCR cannot see emoji in images — resolved via optional vision fallback
 
 Tesseract is trained to recognize text glyphs, not pictographs. When an
 emoji is rendered inside a screenshot (PNG/JPG), OCR silently drops it — it
-doesn't misread it, it just never appears in `extracted_text`. Example:
+doesn't misread it, it just never appears in `extracted_text`:
 
 ```
 Input image text:  "Loving this! 🎉🔥⭐"
-OCR output:         "Loving this"
+Tesseract OCR:      "Loving this"
 ```
 
-Consequences:
-- `analyzer.py`'s emoji detection (`EMOJI_RE`) is correct and covers the
-  common Unicode ranges (pictographs, dingbats, flags, `⭐`, `⌚/⏰`, `‼️/⁉️`,
-  and variation-selector/ZWJ sequences) — but it can only score emoji that
-  actually made it into the extracted text.
-- **PDF uploads are unaffected** as long as the source PDF embeds real
-  Unicode text with emoji-capable fonts (e.g. a PDF exported from an app or
-  "printed" from a webpage) — `pypdf` does direct text extraction, not OCR,
-  so emoji come through as normal characters.
-- **This is not fixable within the current design.** Making image uploads
-  emoji-aware would require a cloud OCR/vision service (Google Cloud Vision,
-  Azure Computer Vision, or a multimodal LLM) capable of recognizing
-  pictographic glyphs. That would need an API key and external network
-  calls, which conflicts with the project's explicit goal (see
-  [architecture.md](architecture.md) and the README's "Approach" section) of
-  being fully offline, free, and deterministic. Decision: accepted as a
-  known limitation rather than compromising that design goal.
+This was originally accepted as a permanent limitation (see git history),
+since fixing it meant leaving Tesseract behind for images entirely — no
+amount of image preprocessing or better regex helps when the emoji glyphs
+never reach `extracted_text` in the first place.
+
+**Fix:** `extract_text_from_image()` in [extractor.py](../extractor.py) now
+tries Gemini Flash (vision) first — `gemini-2.5-flash` via the `google-genai`
+SDK, `temperature=0` for consistent transcription — and only falls back to
+Tesseract OCR if no `GEMINI_API_KEY` is configured or the API call fails for
+any reason (network error, invalid key, rate limit, etc.):
+
+```
+Input image text:  "Loving this! 🎉🔥⭐"
+Vision output:      "Loving this! 🎉🔥⭐"
+```
+
+**Why a vision LLM instead of a dedicated OCR API** (Google Cloud Vision,
+Azure Computer Vision): those are still fundamentally *text*-OCR services —
+built to recognize character glyphs, the same category of tool as
+Tesseract, just better-trained. They weren't guaranteed to close the gap on
+the actual problem (pictograph recognition). A vision-capable LLM doesn't
+"OCR" the image at all — it visually interprets everything in it, text and
+pictographs alike, the same way it would describe a photo. Asked to
+transcribe the image verbatim (see `_VISION_PROMPT` in `extractor.py`), it
+reads emoji as content rather than trying to match them against a character
+set, which is exactly the capability Tesseract lacks.
+
+**Why Gemini Flash specifically:** it's natively multimodal (text + vision
+in one model, no separate OCR endpoint to wire up), the `google-genai` SDK
+call is a few lines, and Google AI Studio's free tier (roughly 15
+requests/minute, 1,500/day, model-dependent) covers this app's expected
+volume without a paid plan — an API key from
+[aistudio.google.com](https://aistudio.google.com) takes under a minute to
+get.
+
+**A note on determinism:** default sampling occasionally dropped emoji
+from an otherwise-correct transcription (~1 in 4 in testing). Setting
+`temperature=0` on the Gemini request fixed this — verified consistent
+across repeated runs on the same image before shipping. For a
+transcription task, literal fidelity matters more than variation, so `0` is
+the right setting here.
+
+**How it helps in practice:**
+- Emoji, hashtags, mentions, and punctuation all come through correctly in
+  the transcription, so `analyzer.py`'s existing `EMOJI_RE` heuristic (which
+  was already broadened to cover more Unicode ranges — see git history) now
+  has real emoji to detect in the first place, instead of text that never
+  had it.
+- It also tends to produce a cleaner transcription than Tesseract generally
+  — no image preprocessing (deskew/contrast) is needed, since the model is
+  reading the image holistically rather than glyph-by-glyph.
+
+**Trade-offs of this fix:**
+- **Needs network access and an external API call** — no longer strictly
+  offline for image uploads the way PDF analysis and the original Tesseract
+  path are. In practice it stays free at this app's scale thanks to the
+  Google AI Studio free tier, but it's still a third-party dependency the
+  original design deliberately avoided (see the "Rule-based analysis"
+  section below).
+- **Requires `GEMINI_API_KEY`.** Without it configured, the app falls back
+  to the original Tesseract-only behavior automatically — no crash, no
+  degraded UX beyond emoji being dropped exactly as before. This keeps the
+  zero-config/free path fully intact for anyone who doesn't set the key.
+- **PDF uploads were never affected** by any of this — `pypdf` does direct
+  text extraction (not OCR), so emoji in a PDF's embedded text always came
+  through as normal characters, with or without this change.
+
+See [setup.md](setup.md) and [deployment.md](deployment.md) for how to
+configure `GEMINI_API_KEY` locally and on Render.
 
 ## OCR quality depends entirely on image clarity
 
