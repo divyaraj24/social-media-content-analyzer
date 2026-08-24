@@ -36,8 +36,10 @@ def extract_text_from_pdf(filepath: str) -> str:
 def _extract_text_from_image_vision(filepath: str) -> str | None:
     """Transcribe an image via Gemini vision. Returns None (rather than
     raising) on any failure - missing/invalid credentials, network error,
-    etc. - so the caller can fall back to Tesseract OCR."""
+    etc. - so the caller can fall back to Tesseract OCR. Logs which path
+    ran (and why it fell back) so that's never a silent guess."""
     if not os.environ.get("GEMINI_API_KEY"):
+        print("[extractor] GEMINI_API_KEY not set - using Tesseract OCR (no emoji detection)")
         return None
     try:
         client = genai.Client()
@@ -48,8 +50,13 @@ def _extract_text_from_image_vision(filepath: str) -> str | None:
             config=types.GenerateContentConfig(temperature=0),
         )
         text = (response.text or "").strip()
-        return text or None
-    except Exception:
+        if not text:
+            print("[extractor] Gemini vision returned empty text - falling back to Tesseract OCR")
+            return None
+        print(f"[extractor] used Gemini vision ({_VISION_MODEL}) for image extraction")
+        return text
+    except Exception as exc:
+        print(f"[extractor] Gemini vision call failed ({exc!r}) - falling back to Tesseract OCR")
         return None
 
 
