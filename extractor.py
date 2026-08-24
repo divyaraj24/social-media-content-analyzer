@@ -8,8 +8,11 @@ Text extraction utilities.
   Tesseract OCR via pytesseract otherwise.
 """
 import os
+import time
 
+import httpx
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from pypdf import PdfReader
 from PIL import Image
@@ -17,6 +20,7 @@ import pytesseract
 
 _VISION_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 _VISION_TIMEOUT_MS = 20_000
+_VISION_RETRY_DELAY_SECONDS = 1.5
 _VISION_PROMPT = (
     "Transcribe every piece of text visible in this image exactly as it "
     "appears, including all emoji, hashtags, @mentions, and punctuation. "
@@ -34,25 +38,42 @@ def extract_text_from_pdf(filepath: str) -> str:
     return "\n\n".join(t for t in pages_text if t)
 
 
+def _call_gemini_vision(client: "genai.Client", image: Image.Image):
+    return client.models.generate_content(
+        model=_VISION_MODEL,
+        contents=[_VISION_PROMPT, image],
+        config=types.GenerateContentConfig(
+            temperature=0,
+            http_options=types.HttpOptions(timeout=_VISION_TIMEOUT_MS),
+        ),
+    )
+
+
 def _extract_text_from_image_vision(filepath: str) -> str | None:
     """Transcribe an image via Gemini vision. Returns None (rather than
     raising) on any failure - missing/invalid credentials, network error,
     etc. - so the caller can fall back to Tesseract OCR. Logs which path
-    ran (and why it fell back) so that's never a silent guess."""
+    ran (and why it fell back) so that's never a silent guess.
+
+    Transient errors (5xx / connection issues - e.g. "model overloaded")
+    get one retry after a short delay, since those routinely clear up a
+    second later. Non-transient errors (bad API key, bad request) fail
+    straight to the OCR fallback - retrying those just wastes a call."""
     if not os.environ.get("GEMINI_API_KEY"):
         print("[extractor] GEMINI_API_KEY not set - using Tesseract OCR (no emoji detection)")
         return None
     try:
         client = genai.Client()
         image = Image.open(filepath)
-        response = client.models.generate_content(
-            model=_VISION_MODEL,
-            contents=[_VISION_PROMPT, image],
-            config=types.GenerateContentConfig(
-                temperature=0,
-                http_options=types.HttpOptions(timeout=_VISION_TIMEOUT_MS),
-            ),
-        )
+        try:
+            response = _call_gemini_vision(client, image)
+        except (genai_errors.ServerError, httpx.TransportError) as exc:
+            print(
+                f"[extractor] Gemini vision transient error ({exc!r}), "
+                f"retrying once in {_VISION_RETRY_DELAY_SECONDS}s"
+            )
+            time.sleep(_VISION_RETRY_DELAY_SECONDS)
+            response = _call_gemini_vision(client, image)
         text = (response.text or "").strip()
         if not text:
             print("[extractor] Gemini vision returned empty text - falling back to Tesseract OCR")
